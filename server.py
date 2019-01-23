@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -29,19 +30,55 @@ import socketserver
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
+    base = open("www/index.html").read()
+    basecss = open("www/base.css").read()
+    deep = open("www/deep/index.html").read()
+    deepcss = open("www/deep/deep.css").read()
+
+
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("HTTP/1.1 200 OK",'utf-8'))
-        self.request.sendall(bytearray('''<!DOCTYPE html>
-<html>
-<body>
+        # Decode these bytes into workable information
+        data = self.data.decode("utf-8")
 
-<h1 style="color:blue;">This is a Blue Heading</h1>
+        # Determine the type and location of the request
+        # We are going to assume that the type of the request and host are
+        # always the first two elements in this data object
+        # data[0].split() = [type, location, httpVersion]
+        # data[1].split() = [host, ]
+        # Im not sure we even need the host right now
+        data = data.splitlines()
+        data = data[0].split()[1]
+        
+        # Now we have the path, and we can determine what page to serve the user
+        # We can also serve 404 if that page does not exist
+        # We could probably hardcode this functionality for this assignment as well
+        # So that is what we will do
 
-</body>
-</html>
-''', "utf-8"))
+        # Base page
+        if data == "/index.html" or data == "/" or data == "/index.html/" or data == "/base.css":
+            self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
+            self.request.sendall(bytearray("Content-Type: text/css;\r\n", 'utf-8'))
+            self.request.sendall(bytearray(self.basecss, 'utf-8'))
+            self.request.sendall(bytearray("Content-Type: text/html;\r\n", 'utf-8'))
+            self.request.sendall(bytearray(self.base,'utf-8'))
+            
+            return
+
+        # Deep page
+        if data == "/deep" or data == "/deep/" or data == "/deep/index.html" or data == "/deep/base.css":
+            self.request.sendall(bytearray("HTTP/1.1 200 OK",'utf-8'))
+            self.request.sendall(bytearray(self.deepcss,'utf-8'))
+            self.request.sendall(bytearray(self.deep,'utf-8'))
+            return
+
+        else:
+            # print(data, "Page not found")
+            self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
+            # We could return some random page not found html stuff here
+            return
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
