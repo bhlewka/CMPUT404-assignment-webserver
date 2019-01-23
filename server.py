@@ -32,7 +32,16 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        self.request.sendall(bytearray("HTTP/1.1 200 OK",'utf-8'))
+        self.request.sendall(bytearray('''<!DOCTYPE html>
+<html>
+<body>
+
+<h1 style="color:blue;">This is a Blue Heading</h1>
+
+</body>
+</html>
+''', "utf-8"))
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
