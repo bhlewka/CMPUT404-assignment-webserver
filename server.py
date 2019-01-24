@@ -30,12 +30,6 @@ import os
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
-    base = open("www/index.html").read()
-    basecss = open("www/base.css").read()
-    deep = open("www/deep/index.html").read()
-    deepcss = open("www/deep/deep.css").read()
-
-
     def handle(self):
         self.data = self.request.recv(1024).strip()
         # Decode these bytes into workable information
@@ -48,32 +42,44 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # data[1].split() = [host, ]
         # Im not sure we even need the host right now
         data = data.splitlines()
+        host = data[1]
         data = data[0].split()[1]
-        
-        # Now we have the path, and we can determine what page to serve the user
-        # We can also serve 404 if that page does not exist
-        # We could probably hardcode this functionality for this assignment as well
-        # So that is what we will do
+        datatype = data.split(".")[-1]
+        data = "www" + data
+        # If the user has .. beside each other we will throw an error, or access denied
+        if ".." in data:
+            # Access denied
+            self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
+            return
+
+        # If the user requests a directory we will serve index.html
+        if datatype[-1] == "/":
+            datatype = "html"
+            data += "index.html"
+        # If the user requests a directory without a forward slash / AND the file/directory exists
+        elif datatype not in ["html", "css"]:
+            host ="Location: " + host + "/"
+            print(host)
+            self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n",'utf-8'))
+            self.request.sendall(bytearray(host, "utf-8"))
+            return
+
+        content = "Content-Type: text/" + datatype + "\r\n"
+
 
         # Base page
-        if data == "/index.html" or data == "/" or data == "/index.html/" or data == "/base.css":
+        # We must ensure security such that they cannot access above roots of files
+        # Forbid the .. string of characters?
+        try:
+            req = open(data).read()
             self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
-            self.request.sendall(bytearray("Content-Type: text/css;\r\n", 'utf-8'))
-            self.request.sendall(bytearray(self.basecss, 'utf-8'))
-            self.request.sendall(bytearray("Content-Type: text/html;\r\n", 'utf-8'))
-            self.request.sendall(bytearray(self.base,'utf-8'))
-            
-            return
+            # Send a content type here based on what they request?
+            # Check the last characters of the request?
+            self.request.sendall(bytearray(content, 'utf-8'))
+            self.request.sendall(bytearray(req,'utf-8'))
 
-        # Deep page
-        if data == "/deep" or data == "/deep/" or data == "/deep/index.html" or data == "/deep/base.css":
-            self.request.sendall(bytearray("HTTP/1.1 200 OK",'utf-8'))
-            self.request.sendall(bytearray(self.deepcss,'utf-8'))
-            self.request.sendall(bytearray(self.deep,'utf-8'))
-            return
-
-        else:
-            # print(data, "Page not found")
+        except:
+            print(data, "Page not found")
             self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
             # We could return some random page not found html stuff here
             return
