@@ -36,32 +36,39 @@ class MyWebServer(socketserver.BaseRequestHandler):
         data = self.data.decode("utf-8")
 
         # Determine the type and location of the request
-        # We are going to assume that the type of the request and host are
-        # always the first two elements in this data object
-        # data[0].split() = [type, location, httpVersion]
-        # data[1].split() = [host, ]
-        # Im not sure we even need the host right now
         data = data.splitlines()
         host = data[1]
         data = data[0].split()[1]
         datatype = data.split(".")[-1]
         data = "www" + data
         # If the user has .. beside each other we will throw an error, or access denied
+        # This is good I think
         if ".." in data:
-            # Access denied
             self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
             return
 
-        # If the user requests a directory we will serve index.html
+        # If the user requests a directory we will serve the index.html of that directory
         if datatype[-1] == "/":
             datatype = "html"
             data += "index.html"
-        # If the user requests a directory without a forward slash / AND the file/directory exists
+        # If the user requests a directory without a forward slash we will add a forward slash and redirect them
+        # Ensure the directory exists by trying to open, then 301, otherwise 404
         elif datatype not in ["html", "css"]:
-            host ="Location: " + host + "/"
+            host ="Location: " + host.split()[1] + "/" + data[4:] + "/"
             print(host)
-            self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n",'utf-8'))
-            self.request.sendall(bytearray(host, "utf-8"))
+            # Try to open the corrected directory
+            try:
+                data += "/"
+                req = open(data).read()
+                self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n",'utf-8'))
+                # This should also send the location information, but it is not
+                self.request.sendall(bytearray(host, "utf-8"))
+            except:
+                print(data, "Page not found")
+                self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
+                # We could return some random page not found html stuff here
+                return
+
             return
 
         content = "Content-Type: text/" + datatype + "\r\n"
@@ -79,7 +86,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.request.sendall(bytearray(req,'utf-8'))
 
         except:
-            print(data, "Page not found")
+            # print(data, "Page not found")
             self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
             # We could return some random page not found html stuff here
             return
