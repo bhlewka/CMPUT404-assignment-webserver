@@ -38,6 +38,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # Determine the type and location of the request
         data = data.splitlines()
         host = data[1]
+        requestType = data[0].split()[0]
+        # GET's only allowed
+        if requestType != "GET":
+            self.request.sendall("HTTP/1.1 405 Method Not Allowed\r\n", "utf-8")
+            return
         data = data[0].split()[1]
         datatype = data.split(".")[-1]
         data = "www" + data
