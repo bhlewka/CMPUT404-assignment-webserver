@@ -55,7 +55,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # Ensure the directory exists by trying to open, then 301, otherwise 404
         elif datatype not in ["html", "css"]:
             host ="Location: http://" + host.split()[1] + "/" + data[4:] + "/\r\n"
-            print(host)
+            # print(host)
             # Try to open the corrected directory
             try:
                 data += "/index.html"
@@ -64,7 +64,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 # This should also send the location information, but it is not
                 self.request.sendall(bytearray(host, "utf-8"))
             except:
-                print(data, "Page not found")
+                # print(data, "Page not found")
                 self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
                 # We could return some random page not found html stuff here
                 return
